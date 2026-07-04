@@ -31,21 +31,22 @@ def search_public_inventory(
     in_stock_only: bool,
 ) -> pd.DataFrame:
     sql = """
-    SELECT
-        MIN(cp.card_name) AS card_name,
-        MIN(cp.set_name) AS set_name,
-        cp.set_code,
-        cp.collector_number,
-        MIN(cp.mana_cost),
-        MIN(cp.color_identity),
-        MIN(cp.type_line),
-        MIN(cp.oracle_text),
-        SUM(si.stock) AS total_stock,
-        MIN(si.effective_price) AS price
-    FROM shop_inventory si
-    JOIN card_printings cp
-      ON cp.scryfall_id = si.scryfall_id
-    WHERE si.is_active = TRUE
+    WITH grouped_inventory AS (
+        SELECT
+            MIN(cp.card_name) AS card_name,
+            MIN(cp.set_name) AS set_name,
+            cp.set_code,
+            cp.collector_number,
+            MIN(cp.mana_cost) AS mana_cost,
+            MIN(cp.color_identity) AS color_identity,
+            MIN(cp.type_line) AS type_line,
+            MIN(cp.oracle_text) AS oracle_text,
+            SUM(si.stock) AS total_stock,
+            MIN(si.effective_price) AS price
+        FROM shop_inventory si
+        JOIN card_printings cp
+          ON cp.scryfall_id = si.scryfall_id
+        WHERE si.is_active = TRUE
     """
     params = []
 
@@ -66,17 +67,30 @@ def search_public_inventory(
         params.append(max_price)
 
     sql += """
-    GROUP BY
-        cp.set_code,
-        cp.collector_number,
+        GROUP BY
+            cp.set_code,
+            cp.collector_number
+    )
+    SELECT
+        card_name,
+        set_name,
+        set_code,
+        collector_number,
+        mana_cost,
+        color_identity,
+        type_line,
+        oracle_text,
+        total_stock,
+        price
+    FROM grouped_inventory
     ORDER BY
-        MIN(cp.card_name),
-        MIN(cp.set_name),
+        card_name,
+        set_name,
         CASE
-            WHEN cp.collector_number ~ '^[0-9]+$' THEN CAST(cp.collector_number AS INTEGER)
+            WHEN collector_number ~ '^[0-9]+$' THEN CAST(collector_number AS INTEGER)
             ELSE 999999
         END,
-        cp.collector_number
+        collector_number
     """
 
     with get_connection() as conn:
