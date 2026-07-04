@@ -6,7 +6,7 @@ import psycopg
 from psycopg.rows import dict_row
 import streamlit as st
 
-st.set_page_config(page_title="Public Inventory", layout="wide")
+st.set_page_config(page_title="JD's Hobby Shop - Inventory", layout="wide")
 
 
 def get_database_url() -> str:
@@ -122,7 +122,8 @@ def format_in_stock(total_stock) -> str:
         return "Out of Stock"
 
 
-st.title("Shop Inventory")
+st.title("JD's Hobby Shop")
+st.subheader("Shop Inventory")
 
 with st.sidebar:
     st.header("Filters")
