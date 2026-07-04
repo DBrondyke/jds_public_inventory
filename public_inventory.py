@@ -125,8 +125,15 @@ st.title("JD's Hobby Shop")
 st.caption("Browse current singles in stock")
 
 with st.sidebar:
-    st.image("https://3464afe7d7c20f433c55.cdn6.editmysite.com/uploads/b/3464afe7d7c20f433c5554417c99be366c21051c92abce030a6e8e9980742b5e/Untitled%20design_1751320691.png?width=2400&optimize=medium", width=90)
-    st.link_button("Visit homepage", "https://www.jdshobbyshop.com/", width="content")
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        st.image("https://3464afe7d7c20f433c55.cdn6.editmysite.com/uploads/b/3464afe7d7c20f433c5554417c99be366c21051c92abce030a6e8e9980742b5e/Untitled%20design_1751320691.png?width=2400&optimize=medium", width=90)
+
+    with col2:
+        st.write("")
+        st.write("")
+        st.link_button("Visit homepage", "https://www.jdshobbyshop.com/", width="content")
     st.header("Filters")
     name_query = st.text_input("Card name")
     set_query = st.text_input("Set name or code")
