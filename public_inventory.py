@@ -135,8 +135,8 @@ def render_inventory_table(df: pd.DataFrame):
         column_order=[
             "card_name",
             "set_name",
-            "mana_cost",
-            "color_identity",
+            "mana_cost_display",
+            "color_identity_display",
             "type_line",
             "price",
             "availability",
@@ -146,8 +146,8 @@ def render_inventory_table(df: pd.DataFrame):
         column_config={
             "card_name": st.column_config.TextColumn("Card Name", width="medium"),
             "set_name": st.column_config.TextColumn("Set", width="medium"),
-            "mana_cost": st.column_config.TextColumn("Cost", width="small"),
-            "color_identity": st.column_config.TextColumn("Color", width="small"),
+            "mana_cost_display": st.column_config.TextColumn("Cost", width="small"),
+            "color_identity_display": st.column_config.TextColumn("Color", width="small"),
             "type_line": st.column_config.TextColumn("Type", width="medium"),
             "price": st.column_config.NumberColumn("Price", format="$%.2f"),
             "availability": st.column_config.TextColumn("Availability", width="small"),
@@ -205,47 +205,46 @@ results_df = search_public_inventory(
     in_stock_only=in_stock_only,
 )
 
-if results_df.empty:
-    st.write("Select a card to view details.")
+left, right = st.columns([5,2])
+
+with left:
     st.write(f"Matches: {len(results_df)}")
-    st.info("No cards match current filters.")
-else:
-    display_df = results_df[
-        [
-            "card_name",
-            "set_name",
-            "mana_cost",
-            "color_identity",
-            "type_line",
-            "price",
-            "total_stock",
-            "set_code",
-            "collector_number",
-        ]
-    ].copy()
-    
-    display_df["mana_cost_display"] = display_df["mana_cost"].apply(lambda v: clean_text(v, "-"))
-    display_df["color_identity_display"] = display_df["color_identity"].apply(lambda v: clean_text(v, "-"))
-    selected_rows = get_selected_rows()
-    
-    # Guard against stale selection after filters change
-    if selected_rows and selected_rows[0] >= len(results_df):
-        selected_rows = []
-    
-    # Put above match count
-    if not selected_rows:
-        st.write("Select a card to view details.")
-        st.write(f"Matches: {len(results_df)}")
-        render_inventory_table(display_df)
+    if results_df.empty:
+        st.info("No cards match current filters.")
     else:
-        st.write(f"Matches: {len(results_df)}")
+        display_df = results_df[
+            [
+                "card_name",
+                "set_name",
+                "mana_cost",
+                "color_identity",
+                "type_line",
+                "price",
+                "total_stock",
+                "set_code",
+                "collector_number",
+            ]
+        ].copy()
         
-        left, right = st.columns([3, 2])
+        display_df["mana_cost_display"] = display_df["mana_cost"].apply(lambda v: clean_text(v, "-"))
+        display_df["color_identity_display"] = display_df["color_identity"].apply(lambda v: clean_text(v, "-"))
+        
+        event = render_inventory_table(display_df)
 
-        with left:
-            render_inventory_table(display_df)
-
-        with right:
+with right:
+    if results_df.empty:
+        st.write("Select a card to view details.")
+    else:
+        selected_rows = get_selected_rows()
+        
+        # Guard against stale selection after filters change
+        if selected_rows and selected_rows[0] >= len(results_df):
+            selected_rows = []
+        
+        # Put above match count
+        if not selected_rows:
+            st.write("Select a card to view details.")
+        else:
             selected_row = results_df.iloc[selected_rows[0]]
             
             c1, c2 = st.columns([3,1], vertical_alignment="bottom")
