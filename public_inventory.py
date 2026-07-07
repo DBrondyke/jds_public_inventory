@@ -114,7 +114,16 @@ def search_public_inventory(
 
     return pd.DataFrame([dict(r) for r in rows], columns=columns)
 
-# inventory table helper
+# inventory table helpers
+
+def get_table_key() -> str:
+    if "inventory_table_version" not in st.session_state:
+        st.session_state["inventory_table_version"] = 0
+    return f"inventory_table_{st.session_state['inventory_table_version']}"
+
+def clear_table_selection():
+    st.session_state["inventory_table_version"] += 1
+
 def render_inventory_table(df: pd.DataFrame):
     return st.dataframe(
         df,
@@ -148,10 +157,18 @@ def render_inventory_table(df: pd.DataFrame):
     )
 
 def get_selected_rows() -> list[int]:
-    table_state = st.session_state.get("inventory_table", {})
+    table_state = st.session_state.get(get_table_key(), {})
     selection = table_state.get("selection", {})
     rows = selection.get("rows", [])
     return rows if isinstance(rows, list) else []
+
+def clean_text(value, fallback="-"):
+    if value is None:
+        return fallback
+    text = str(value).strip()
+    if text == "" or text.lower() == "none" or text.lower() == "nan":
+        return fallback
+    return text
 
 def format_in_stock(total_stock) -> str:
     try:
@@ -206,7 +223,9 @@ else:
             "collector_number",
         ]
     ].copy()
-
+    
+    display_df["mana_cost_display"] = display_df["mana_cost"].apply(lambda v: clean_text(v, "-"))
+    display_df["color_identity_display"] = display_df["color_identity"].apply(lambda v: clean_text(v, "-"))
     selected_rows = get_selected_rows()
     
     # Guard against stale selection after filters change
@@ -229,14 +248,18 @@ else:
         with right:
             selected_row = results_df.iloc[selected_rows[0]]
             
-            st.subheader(selected_row["card_name"])
+            c1, c2 = st.columns([3,1], vertical_alignment="bottom")
+            with c1:
+                st.subheader(selected_row["card_name"])
+            with c2:
+                st.button("Clear selection", on_click=clear_table_selection, width="content")
             st.write(f"**Set:** {selected_row['set_name']} ({selected_row['set_code']})")
             st.write(f"**Collector #:** {selected_row['collector_number']}")
-            st.write(f"**Cost:** {selected_row['mana_cost'] or '—'}")
-            st.write(f"**Color:** {selected_row['color_identity'] or 'Colorless'}")
-            st.write(f"**Type:** {selected_row['type_line'] or '—'}")
+            st.write(f"**Cost:** {clean_text(selected_row['mana_cost'],'-')}")
+            st.write(f"**Color:** {clean_text(selected_row['color_identity'],'Colorless')}")
+            st.write(f"**Type:** {selected_row['type_line'] or '-'}")
             st.write(f"**Availability:** {format_in_stock(selected_row['total_stock'])}")
-            st.write(f"**Price:** ${float(selected_row['price']):.2f}" if selected_row["price"] is not None else "**Price:** —")
+            st.write(f"**Price:** ${float(selected_row['price']):.2f}" if selected_row["price"] is not None else "**Price:** -")
 
             st.text_area(
                 "Oracle Text",
