@@ -114,6 +114,44 @@ def search_public_inventory(
 
     return pd.DataFrame([dict(r) for r in rows], columns=columns)
 
+# inventory table helper
+def render_inventory_table(df: pd.DataFrame):
+    return st.dataframe(
+        df,
+        key="inventory_table",
+        width="stretch",
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        column_order=[
+            "card_name",
+            "set_name",
+            "mana_cost",
+            "color_identity",
+            "type_line",
+            "price",
+            "availability",
+            "set_code",
+            "collector_number",
+        ],
+        column_config={
+            "card_name": st.column_config.TextColumn("Card Name", width="medium"),
+            "set_name": st.column_config.TextColumn("Set", width="medium"),
+            "mana_cost": st.column_config.TextColumn("Cost", width="small"),
+            "color_identity": st.column_config.TextColumn("Color", width="small"),
+            "type_line": st.column_config.TextColumn("Type", width="medium"),
+            "price": st.column_config.NumberColumn("Price", format="$%.2f"),
+            "availability": st.column_config.TextColumn("Availability", width="small"),
+            "set_code": st.column_config.TextColumn("Set Code", width="small"),
+            "collector_number": st.column_config.TextColumn("Collector #", width="small"),
+        },
+    )
+
+def get_selected_rows() -> list[int]:
+    table_state = st.session_state.get("inventory_table", {})
+    selection = table_state.get("selection", {})
+    rows = selection.get("rows", [])
+    return rows if isinstance(rows, list) else []
 
 def format_in_stock(total_stock) -> str:
     try:
@@ -150,72 +188,47 @@ results_df = search_public_inventory(
     in_stock_only=in_stock_only,
 )
 
-left, right = st.columns([3, 2])
-
-with left:
+if results_df.empty:
+    st.write("Select a card to view details.")
     st.write(f"Matches: {len(results_df)}")
+    st.info("No cards match current filters.")
+else:
+    display_df = results_df[
+        [
+            "card_name",
+            "set_name",
+            "mana_cost",
+            "color_identity",
+            "type_line",
+            "price",
+            "total_stock",
+            "set_code",
+            "collector_number",
+        ]
+    ].copy()
 
-    if results_df.empty:
-        st.info("No cards match the current filters.")
+    selected_rows = get_selected_rows()
+    
+    # Guard against stale selection after filters change
+    if selected_rows and selected_rows[0] >= len(results_df):
+        selected_rows = []
+    
+    # Put above match count
+    if not selected_rows:
+        st.write("Select a card to view details.")
+        st.write(f"Matches: {len(results_df)}")
+        render_inventory_table(display_df)
     else:
-        display_df = results_df[
-            [
-                "card_name",
-                "set_name",
-                "mana_cost",
-                "color_identity",
-                "type_line",
-                "price",
-                "total_stock",
-                "set_code",
-                "collector_number",
-            ]
-        ].copy()
+        st.write(f"Matches: {len(results_df)}")
+        
+        left, right = st.columns([3, 2])
 
-        display_df["availability"] = display_df["total_stock"].apply(format_in_stock)
+        with left:
+            render_inventory_table(display_df)
 
-        event = st.dataframe(
-            display_df,
-            width="stretch",
-            hide_index=True,
-            on_select="rerun",
-            selection_mode="single-row",
-            column_order=[
-                "card_name",
-                "set_name",
-                "mana_cost",
-                "color_identity",
-                "type_line",
-                "price",
-                "availability",
-                "set_code",
-                "collector_number",
-            ],
-            column_config={
-                "card_name": st.column_config.TextColumn("Card Name", width="medium"),
-                "set_name": st.column_config.TextColumn("Set", width="medium"),
-                "mana_cost": st.column_config.TextColumn("Cost", width="small"),
-                "color_identity": st.column_config.TextColumn("Color", width="small"),
-                "type_line": st.column_config.TextColumn("Type", width="medium"),
-                "price": st.column_config.NumberColumn("Price", format="$%.2f"),
-                "availability": st.column_config.TextColumn("Availability", width="small"),
-                "set_code": st.column_config.TextColumn("Set Code", width="small"),
-                "collector_number": st.column_config.TextColumn("Collector #", width="small"),
-            },
-        )
-
-with right:
-    if results_df.empty:
-        st.info("Select a card to view full text.")
-    else:
-        selected_rows = event["selection"]["rows"] if "event" in locals() else []
-
-        if not selected_rows:
-            st.info("Select a card to view details.")
-        else:
-            selected_index = selected_rows[0]
-            selected_row = results_df.iloc[selected_index]
-
+        with right:
+            selected_row = results_df.iloc[selected_rows[0]]
+            
             st.subheader(selected_row["card_name"])
             st.write(f"**Set:** {selected_row['set_name']} ({selected_row['set_code']})")
             st.write(f"**Collector #:** {selected_row['collector_number']}")
