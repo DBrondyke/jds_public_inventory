@@ -127,7 +127,7 @@ def clear_table_selection():
 def render_inventory_table(df: pd.DataFrame):
     return st.dataframe(
         df,
-        key="inventory_table",
+        key=get_table_key(),
         width="stretch",
         hide_index=True,
         on_select="rerun",
