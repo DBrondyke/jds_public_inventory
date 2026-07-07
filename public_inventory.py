@@ -227,7 +227,7 @@ with left:
         ].copy()
         
         display_df["mana_cost_display"] = display_df["mana_cost"].apply(lambda v: clean_text(v, "-"))
-        display_df["color_identity_display"] = display_df["color_identity"].apply(lambda v: clean_text(v, "-"))
+        display_df["color_identity_display"] = display_df["color_identity"].apply(lambda v: clean_text(v, "Colorless"))
         
         event = render_inventory_table(display_df)
 
